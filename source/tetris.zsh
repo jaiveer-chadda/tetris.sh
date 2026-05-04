@@ -19,14 +19,11 @@ tetris::buffer_cleanup() {
 # ——————————————————————————————————————————————————————————————————————————— #
 
 tetris::check_tty_size() {
-  local -ri 10  width=$display_width
-  local -ri 10 height=$display_height
-
-  if (( COLUMNS < width || LINES < height )) {
+  if (( COLUMNS < bg_width || LINES < bg_height )) {
     {
       echo 'tetris: Screen too small'
-      echo "\tScreen has to be at least : ${(l:3:)width} cols x $height rows"
-      echo "\tScreen is currently       : ${(l:3:)COLUMNS} cols x $LINES rows"
+      echo "\tMinimum dimensions : ${(l:3:)bg_width} cols x $bg_height rows"
+      echo "\tCurrent dimensions : ${(l:3:)COLUMNS} cols x $LINES rows"
     } >&2
     return 1
   }
@@ -34,9 +31,9 @@ tetris::check_tty_size() {
 
 # ——————————————————————————————————————————————————————————————————————————— #
 
-tetris::display_setup() {
-  local -ri 10 padding_x=$(( ( COLUMNS - display_width  ) / 2 ))
-  local -ri 10 padding_y=$(( ( LINES   - display_height ) / 2 ))
+tetris::background_setup() {
+  local -ri 10 padding_x=$(( ( COLUMNS - bg_width  ) / 2 ))
+  local -ri 10 padding_y=$(( ( LINES   - bg_height ) / 2 ))
 
   local -r NL=$'\n'
   local -r x_pad_str="${(r:$padding_x:)}"
@@ -45,7 +42,7 @@ tetris::display_setup() {
   # vertical offset of the grid
   echo "$y_pad_str"
   # add the padding before the first line, and after every newline
-  echo "$x_pad_str${display//$NL/$NL$x_pad_str}"
+  echo "$x_pad_str${background//$NL/$NL$x_pad_str}"
 }
 
 # ——————————————————————————————————————————————————————————————————————————— #
@@ -56,7 +53,7 @@ tetris() {
 
   setopt local_options       # these options will be unset on function exit
   setopt local_traps         # the traps set below will be unset on exit
-  setopt warn_create_global  # warn if one of the vars below will be global
+  setopt warn_create_global  # warn if any of the vars set will become global
   setopt warn_nested_var     # warn if a child process overwrites a local var
 
   # EXIT doesn't need to be sent `kill`, so just clean up the buffer
@@ -74,18 +71,18 @@ tetris() {
 
   # — Import, Verify, & Display Screen ————————————————————————————————————— #
 
-  local -r display="$( cat ../resources/out/display.txt )"
+  local -r background="$( cat ../resources/out/background.txt )"
 
-  local -ri 10 display_width=${#display/%$'\n'*}
-  local -ri 10 display_height=$(( "${#display//[^$'\n']}" + 1 ))
+  local -ri 10 bg_width=${#background/%$'\n'*}
+  local -ri 10 bg_height=$(( ${#background//[^$'\n']} + 1 ))
 
-  # make sure the screen's large enough to fit the display
+  # make sure the screen's large enough to fit the background
   tetris::check_tty_size || return 1
 
   # ————————————————————————————————————————————— #
 
-  tetris::buffer_setup   # set up the buffer and hide the cursor
-  tetris::display_setup  # print the base display, without anything filled in
+  tetris::buffer_setup      # set up the buffer and hide the cursor
+  tetris::background_setup  # print the background without any info filled in
 
   # ————————————————————————————————————————————————————————————————————————— #
 
